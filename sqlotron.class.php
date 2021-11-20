@@ -128,11 +128,15 @@ class SQLBreakDown
 	}
 
 	/**
-	 * 
+	 * @param string|Token[] $sql
 	 */
-	public function parse($sql)
+	public function parse($sql = null)
 	{
-		$this->tokenize($sql);
+		if ($sql !== null) {
+			if (is_string($sql)) $this->tokenize($sql);
+			elseif (is_array($sql)) $this->tokens = $sql;
+			else throw new Exception('$sql must be either an array or a string');
+		}
 		$ret = [
 			'select' =>   [],
 			'from' =>     [],
@@ -141,19 +145,18 @@ class SQLBreakDown
 			'orderby' =>  [],
 			'limit' =>    [],
 			'offset' =>   [],
+			'end' =>      [],
 		];
 		$tokenN = 0;
 		$findClosing = function () use (&$tokenN, &$findClosing) {
-			$tokenN++;
 			$r = [];
-			while ($tokenN < count($this->tokens)) {
-				$token = $this->tokens[$tokenN++];
+			while (++$tokenN < count($this->tokens)) {
+				$token = $this->tokens[$tokenN];
 				$r[] = $token;
 				if ($token->value === ')') {
-					$tokenN--;
 					return $r;
 				} elseif ($token->value === '(') {
-					return array_merge($r, $findClosing());
+					$r = array_merge($r, $findClosing());
 				}
 			}
 			return $r;
@@ -171,6 +174,10 @@ class SQLBreakDown
 			$token = $this->tokens[$tokenN];
 			if ($token->type === 'whitespace') {
 				$ret[$currentBucket][] = $token;
+			} elseif ($token->lc === ';') {
+				$currentBucket = 'end';
+				$ret[$currentBucket][] = $token;
+				break; // once query is finished, do not parse further.
 			} elseif ($token->lc === 'select') {
 				$ret[$currentBucket][] = $token;
 			} elseif ($token->value === '(') {
@@ -346,6 +353,9 @@ class SQLBreakDown
 	private function _tokenError() {
 		return new Exception('TokenizeError');
 	}
+	public function toString($tokenArray) {
+		return implode('', array_column($tokenArray, 'value'));
+	}
 	public function serializeBuckets() {
 		$ret = [];
 		foreach ($this->buckets as $name => $bucket) {
@@ -354,7 +364,27 @@ class SQLBreakDown
 		return $ret;
 	}
 	public function getSQL() {
-		return implode(' ', array_values($this->serializeBuckets()));
+		return implode('', array_values($this->serializeBuckets()));
+	}
+	/**
+	 * @param array $more  possible keys are bucket names: select, from, where,
+	 *                     having, orderby, limit, offset
+	 */
+	public function getAlteredSQL($more) {
+		$allowedBucketNames = [
+			'select',
+			'from',
+			'where',
+			'having',
+			'orderby',
+		];
+		$b = $this->serializeBuckets();
+		foreach ($more as $bucketName => $addition) {
+			if (in_array($bucketName, $allowedBucketNames)) {
+				$b[$bucketName] .= $addition . ' ';
+			}
+		}
+		return implode('', array_values($b));
 	}
 }
 
