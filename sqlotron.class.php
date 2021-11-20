@@ -13,6 +13,7 @@ define('SEMICOLON', ';');
 
 if (!function_exists('str_contains')) {
 	function str_contains($haystack, $needle) {
+		if (empty($needle)) return false;
 		return strpos($haystack, $needle) !== false;
 	}
 }
@@ -72,7 +73,7 @@ class Token
 
 class SQLBreakDown
 {
-	function __construct()
+	function __construct($sql = null)
 	{
 		$this->TOKENTYPES = [
 			'undetermined' => [
@@ -109,6 +110,7 @@ class SQLBreakDown
 				'starter' => DIGIT . PERIOD,
 			],
 		];
+		if ($sql) $this->parse($sql);
 	}
 
 	public function tokenize($sql)
@@ -340,7 +342,9 @@ class SQLBreakDown
 		}
 	}
 	private function _current() {
-		return mb_substr($this->sql, $this->cursor, 1);
+		$ret = mb_substr($this->sql, $this->cursor, 1);
+		if (is_null($ret)) return '';
+		return $ret;
 	}
 	private function _next() {
 		$this->cursor++;
@@ -367,10 +371,28 @@ class SQLBreakDown
 		return implode('', array_values($this->serializeBuckets()));
 	}
 	/**
-	 * @param array $more  possible keys are bucket names: select, from, where,
-	 *                     having, orderby, limit, offset
+	 * Returns a modified version of the parsed original query.
+	 * The modifications are simply concatenated to the relevant portion of the
+	 * query.
+	 * 
+	 * Example: 
+	 * ```php 
+	 * $query = new SQLBreakDown("SELECT name FROM user WHERE id = 1");
+	 * echo $query->getAlteredSQL([
+	 *     'select' => ', supervisor.name AS supname',
+	 *     'from' => 'LEFT JOIN user AS supervisor ON user.fk_sup = supervisor.rowid'
+	 * ]);
+	 * ```
+	 * Will print:
+	 *     SELECT name , supervisor.name AS supname FROM user LEFT JOIN user AS
+	 *     supervisor ON user.fk_sup = supervisor.rowid WHERE id = 1
+
+	 * 
+	 * 
+	 * @param array $modifications  possible keys: select, from, where, having,
+	 *                                             orderby, limit, offset
 	 */
-	public function getAlteredSQL($more) {
+	public function getAlteredSQL($modifications) {
 		$allowedBucketNames = [
 			'select',
 			'from',
@@ -379,7 +401,7 @@ class SQLBreakDown
 			'orderby',
 		];
 		$b = $this->serializeBuckets();
-		foreach ($more as $bucketName => $addition) {
+		foreach ($modifications as $bucketName => $addition) {
 			if (in_array($bucketName, $allowedBucketNames)) {
 				$b[$bucketName] .= $addition . ' ';
 			}
