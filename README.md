@@ -3,10 +3,12 @@
 Ce dépôt est juste un POC : c'est un parseur SQL minimaliste.
 
 - il ne parse que les SELECT
-- il ne parse pas les sous-requêtes, mais les détecte (récursivement si besoin)
+- il ne parse pas les sous-requêtes, mais les détecte (y compris si imbriquées)
+  pour ne pas les confondre avec la requête principale
 - il détecte les chaînes de caractères classiques, mais pourrait être mis en
   échec par des syntaxes plus exotiques.
-- il n'a pas de tests unitaires (pas encore) et n'a pas été vraiment testé.
+- il n'a pas de tests unitaires (pas encore) et n'a pas été vraiment testé: pour
+  le moment, c'est encore expérimental
 
 
 ## État actuel
