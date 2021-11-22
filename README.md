@@ -19,7 +19,12 @@ Ce dépôt est juste un POC : c'est un parseur SQL minimaliste.
 ## Objectif
 
 L’objectif à court terme serait d’avoir quelque chose de suffisamment fiable pour
-être intégré à Dolibarr.
+être intégré à Dolibarr. Ça permettrait beaucoup de choses. Actuellement, quand
+une requête est construite, elle n'est plus vraiment modifiable. On est obligé de
+passer par plusieurs hooks au lieu d'un seul, et, parfois, le hook utilisé n'est
+pas idéal (par exemple, si on veut ajouter un `HAVING`, on utilise actuellement le
+hook prévu pour le `WHERE`, mais si un autre module fait la même chose, c'est
+l'erreur de syntaxe garantie).
 
 ## État actuel
 
