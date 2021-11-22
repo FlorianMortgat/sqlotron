@@ -1,0 +1,6 @@
+# ignore common IDE settings
+.idea/*
+.vscode/*
+
+# vim temp files
+.*.swp
