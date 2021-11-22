@@ -13,7 +13,7 @@ define('SEMICOLON', ';');
 
 if (!function_exists('str_contains')) {
 	function str_contains($haystack, $needle) {
-		if (empty($needle)) return false;
+		if (empty($needle) && $needle !== '0') return false;
 		return strpos($haystack, $needle) !== false;
 	}
 }
