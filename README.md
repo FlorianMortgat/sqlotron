@@ -2,14 +2,29 @@
 
 Ce dépôt est juste un POC : c'est un parseur SQL minimaliste.
 
-- il ne parse que les SELECT
+- il ne parse que les `SELECT`
+- il échoue si la requête ne commence pas par `SELECT` (requêtes utilisant les
+  CTE notamment).
+- il échoue sur les requêtes avec `UNION`
 - il ne parse pas les sous-requêtes, mais les détecte (y compris si imbriquées)
   pour ne pas les confondre avec la requête principale
-- il détecte les chaînes de caractères classiques, mais pourrait être mis en
+- il détecte les chaînes de caractères classiques, y compris celles contenant le
+  caractère délimiteur échappé ou répété deux fois, mais pourrait être mis en
   échec par des syntaxes plus exotiques.
-- il n'a pas de tests unitaires (pas encore) et n'a pas été vraiment testé: pour
-  le moment, c'est encore expérimental
+- idem pour les nombres (je n'ai pas testé les nombres en représentation
+  exponentielle par exemple).
+- il n'a pas de tests unitaires (pas encore) et n'a pas été convenablement testé:
+  pour le moment, c'est expérimental.
 
+## Objectif
+
+L’objectif à court terme serait d’avoir quelque chose de suffisamment fiable pour
+être intégré à Dolibarr. Ça permettrait beaucoup de choses. Actuellement, quand
+une requête est construite, elle n'est plus vraiment modifiable. On est obligé de
+passer par plusieurs hooks au lieu d'un seul, et, parfois, le hook utilisé n'est
+pas idéal (par exemple, si on veut ajouter un `HAVING`, on utilise actuellement le
+hook prévu pour le `WHERE`, mais si un autre module fait la même chose, c'est
+l'erreur de syntaxe garantie).
 
 ## État actuel
 

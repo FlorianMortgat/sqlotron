@@ -1,19 +1,16 @@
 <?php
-define('DIGIT', '0123456789');
-define('ALPHA', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
-define('PAREN', '()');
-define('SINGLEQUOTE', "'");
-define('DOUBLEQUOTE', '"');
-define('UNDERSCORE', '_');
-define('PERIOD', '.');
-define('OPERATOR', '+-*/=!<>');
-define('WHITESPACE', " \t\r\n");
-define('COMMA', ',');
-define('SEMICOLON', ';');
+
 
 if (!function_exists('str_contains')) {
-	function str_contains($haystack, $needle) {
-		if (empty($needle)) return false;
+	/**
+	 * TODO: the function exists in php8 and is probably not implemented that way so this is a bad idea
+	 * @param $haystack
+	 * @param $needle
+	 * @return bool
+	 */
+	function str_contains($haystack, $needle)
+	{
+		if (empty($needle) && $needle !== '0') return false;
 		return strpos($haystack, $needle) !== false;
 	}
 }
@@ -42,6 +39,11 @@ class Token
 	var $value;
 	var $group;
 	var $lc;
+
+	/**
+	 * @param string $tokenGroup  Rough classification of the token
+	 * @param string $value
+	 */
 	function __construct($tokenGroup, $value)
 	{
 		$this->group = $tokenGroup;
@@ -49,6 +51,11 @@ class Token
 		$this->value = $value;
 		$this->lc = strtolower($value);
 	}
+
+	/**
+	 * TODO
+	 * @return string
+	 */
 	function _getTokenType()
 	{
 		if ($this->group === 'singlequotestring' || $this->group === 'doublequotestring') {
@@ -73,6 +80,22 @@ class Token
 
 class SQLBreakDown
 {
+	const DIGIT = '0123456789';
+	const ALPHA = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	const PAREN = '()';
+	const SINGLEQUOTE = "'";
+	const DOUBLEQUOTE = '"';
+	const UNDERSCORE = '_';
+	const PERIOD = '.';
+	const OPERATOR = '+-*/=!<>';
+	const WHITESPACE = " \t\r\n";
+	const COMMA = ',';
+	const SEMICOLON = ';';
+
+	/**
+	 * @param null|string $sql
+	 * @throws Exception
+	 */
 	function __construct($sql = null)
 	{
 		$this->TOKENTYPES = [
@@ -89,30 +112,35 @@ class SQLBreakDown
 				'starter' => '`',
 			],
 			'symbol' => [
-				'starter' => ALPHA,
+				'starter' => self::ALPHA,
 			],
 			'operator' => [
-				'starter' => OPERATOR,
+				'starter' => self::OPERATOR,
 			],
 			'whitespace' => [
-				'starter' => WHITESPACE,
+				'starter' => self::WHITESPACE,
 			],
 			'comma' => [
-				'starter' => COMMA,
+				'starter' => self::COMMA,
 			],
 			'semicolon' => [
-				'starter' => SEMICOLON,
+				'starter' => self::SEMICOLON,
 			],
 			'paren' => [
-				'starter' => PAREN,
+				'starter' => self::PAREN,
 			],
 			'numberliteral' => [
-				'starter' => DIGIT . PERIOD,
+				'starter' => self::DIGIT . self::PERIOD,
 			],
 		];
 		if ($sql) $this->parse($sql);
 	}
 
+	/**
+	 * @param string $sql
+	 * @return Token[] array
+	 * @throws Exception
+	 */
 	public function tokenize($sql)
 	{
 		// on convertit la chaîne SQL en un itérateur sur tableau de caractères
@@ -130,7 +158,7 @@ class SQLBreakDown
 	}
 
 	/**
-	 * @param string|Token[] $sql
+	 * @param string|Token[]|null $sql
 	 */
 	public function parse($sql = null)
 	{
@@ -209,12 +237,18 @@ class SQLBreakDown
 			}
 			$tokenN++;
 		}
-		$tokenVal = function ($token) { return $token->value; };
+		$tokenVal = function ($token) {
+			return $token->value; };
 		$this->buckets = $ret;
 		foreach ($ret as $bucketName => $bucket) {
 			$this->{$bucketName} = implode('', array_map($tokenVal, $bucket));
 		}
 	}
+
+	/**
+	 * @param string $c  One-character string
+	 * @return string
+	 */
 	private function _determine($c)
 	{
 		foreach ($this->TOKENTYPES as $tokentype => $tokentypedef) {
@@ -224,12 +258,17 @@ class SQLBreakDown
 		}
 		return 'undetermined';
 	}
+
+	/**
+	 * @return Token
+	 * @throws Exception
+	 */
 	private function _getNextToken()
 	{
 		$c = $this->_current();
 		$curTokenGroup = $this->_determine($c);
 		$curTokenValue = $c;
-		switch($curTokenGroup) {
+		switch ($curTokenGroup) {
 			case 'undetermined':
 				$curTokenValue .= $this->_next();
 				return new Token($curTokenGroup, $curTokenValue);
@@ -291,7 +330,7 @@ class SQLBreakDown
 			case 'symbol':
 				while ($this->_current() !== '') {
 					$c = $this->_next();
-					if (str_contains(ALPHA . DIGIT . UNDERSCORE . PERIOD, $c)) {
+					if (str_contains(self::ALPHA . self::DIGIT . self::UNDERSCORE . self::PERIOD, $c)) {
 						$curTokenValue .= $c;
 					} else {
 						return new Token($curTokenGroup, $curTokenValue);
@@ -301,7 +340,7 @@ class SQLBreakDown
 			case 'operator':
 				while ($this->_current() !== '') {
 					$c = $this->_next();
-					if (str_contains(OPERATOR, $c)) {
+					if (str_contains(self::OPERATOR, $c)) {
 						$curTokenValue .= $c;
 					} else {
 						return new Token($curTokenGroup, $curTokenValue);
@@ -311,7 +350,7 @@ class SQLBreakDown
 			case 'whitespace':
 				while ($this->_current() !== '') {
 					$c = $this->_next();
-					if (str_contains(WHITESPACE, $c)) {
+					if (str_contains(self::WHITESPACE, $c)) {
 						$curTokenValue .= $c;
 					} else {
 						return new Token($curTokenGroup, $curTokenValue);
@@ -330,7 +369,7 @@ class SQLBreakDown
 			case 'numberliteral':
 				while ($this->_current() !== '') {
 					$c = $this->_next();
-					if (str_contains(DIGIT . PERIOD, $c)) {
+					if (str_contains(self::DIGIT . self::PERIOD, $c)) {
 						$curTokenValue .= $c;
 					} else {
 						return new Token($curTokenGroup, $curTokenValue);
@@ -341,42 +380,78 @@ class SQLBreakDown
 				throw $this->_tokenError();
 		}
 	}
-	private function _current() {
+
+	/**
+	 * @return string
+	 */
+	private function _current()
+	{
 		$ret = mb_substr($this->sql, $this->cursor, 1);
 		if (is_null($ret)) return '';
 		return $ret;
 	}
-	private function _next() {
+
+	/**
+	 * @return string
+	 */
+	private function _next()
+	{
 		$this->cursor++;
 		return $this->_current();
 	}
-	private function _prev() {
+
+	/**
+	 * @return string
+	 */
+	private function _prev()
+	{
 		$this->cursor--;
 		return $this->_current();
 	}
-	private function _tokenError() {
+
+	/**
+	 * @return Exception
+	 */
+	private function _tokenError()
+	{
 		return new Exception('TokenizeError');
 	}
-	public function toString($tokenArray) {
+
+	/**
+	 * @param Token[] $tokenArray
+	 * @return string
+	 */
+	public function toString($tokenArray)
+	{
 		return implode('', array_column($tokenArray, 'value'));
 	}
-	public function serializeBuckets() {
+
+	/**
+	 * @return array
+	 */
+	public function serializeBuckets()
+	{
 		$ret = [];
 		foreach ($this->buckets as $name => $bucket) {
 			$ret[$name] = $this->{$name};
 		}
 		return $ret;
 	}
-	public function getSQL() {
+
+	/**
+	 * @return string
+	 */
+	public function getSQL()
+	{
 		return implode('', array_values($this->serializeBuckets()));
 	}
 	/**
 	 * Returns a modified version of the parsed original query.
 	 * The modifications are simply concatenated to the relevant portion of the
 	 * query.
-	 * 
-	 * Example: 
-	 * ```php 
+	 *
+	 * Example:
+	 * ```php
 	 * $query = new SQLBreakDown("SELECT name FROM user WHERE id = 1");
 	 * echo $query->getAlteredSQL([
 	 *     'select' => ', supervisor.name AS supname',
@@ -387,12 +462,13 @@ class SQLBreakDown
 	 *     SELECT name , supervisor.name AS supname FROM user LEFT JOIN user AS
 	 *     supervisor ON user.fk_sup = supervisor.rowid WHERE id = 1
 
-	 * 
-	 * 
+	 *
+	 *
 	 * @param array $modifications  possible keys: select, from, where, having,
-	 *                                             orderby, limit, offset
+	 *                              orderby, limit, offset
 	 */
-	public function getAlteredSQL($modifications) {
+	public function getAlteredSQL($modifications)
+	{
 		$allowedBucketNames = [
 			'select',
 			'from',
@@ -409,5 +485,3 @@ class SQLBreakDown
 		return implode('', array_values($b));
 	}
 }
-
-
